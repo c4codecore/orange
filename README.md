@@ -9,7 +9,7 @@ A full-stack Instagram-lite social media application where users can share photo
 
 | Layer | Technology |
 |-------|-----------|
-| Mobile + Web Frontend | React Native (Expo) — *in progress* |
+| Mobile + Web Frontend | React Native (Expo) — scaffolded (basic screens + navigation) |
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL |
 | Migrations | Alembic |
@@ -42,7 +42,22 @@ orange-app/
 │   │   └── schemas/  # Pydantic schemas
 │   ├── alembic/      # DB migrations
 │   └── .env          # Environment variables (not committed)
-└── frontend/         # React Native Expo (coming soon)
+└── frontend/         # React Native Expo (scaffolded — basic screens + navigation)
+	├── App.js
+	├── package.json
+	├── src/
+	│   ├── navigation/
+	│   │   └── AppNavigator.js
+	│   ├── context/
+	│   │   └── AuthContext.js
+	│   ├── screens/
+	│   │   ├── FeedScreen.js
+	│   │   ├── LoginScreen.js
+	│   │   ├── RegisterScreen.js
+	│   │   ├── ProfileScreen.js
+	│   │   └── UploadScreen.js
+	│   └── services/
+	│       └── api.js
 ```
 
 ---
@@ -104,6 +119,24 @@ uvicorn app.main:app --reload --port 8001
 
 ---
 
+## 🖥️ Frontend (Development)
+
+### Prerequisites
+- Node.js (16+) and npm
+- (optional) Expo CLI: `npm install -g expo-cli`
+
+### Install & Run
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+To open on a device/emulator run `expo start` and follow the QR / emulator options.
+
+---
+
 ## 📡 API Endpoints
 
 ### Auth
@@ -156,7 +189,7 @@ uvicorn app.main:app --reload --port 8001
 - [x] Photo upload — Supabase Storage
 - [x] Likes, Comments, Follows
 - [x] User profiles & search
-- [ ] React Native (Expo) frontend
+- [ ] React Native (Expo) frontend — scaffolded (basic screens + navigation)
 - [ ] Cross-platform — Mobile + Web
 - [ ] Feed from followed users only
 - [ ] Push notifications

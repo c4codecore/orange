@@ -17,7 +17,7 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Mobile Frontend | React Native (Expo) — *pending* |
+| Mobile Frontend | React Native (Expo) — scaffolded (basic screens + navigation) |
 | Backend | FastAPI (Python) ✅ Complete |
 | Database | PostgreSQL |
 | Migrations | Alembic |
@@ -33,35 +33,53 @@
 
 ```
 orange-app/
-└── backend/
-    ├── app/
-    │   ├── main.py               # FastAPI app entry point
-    │   ├── database.py           # DB connection + session
-    │   ├── dependencies.py       # get_current_user dependency
-    │   ├── core/
-    │   │   ├── config.py         # Settings via .env
-    │   │   └── security.py       # bcrypt + JWT
-    │   ├── models/
-    │   │   ├── user.py
-    │   │   ├── post.py
-    │   │   ├── like.py
-    │   │   ├── comment.py
-    │   │   └── follow.py
-    │   ├── schemas/
-    │   │   ├── user.py
-    │   │   ├── post.py
-    │   │   └── comment.py
-    │   └── routers/
-    │       ├── auth.py           # ✅ Done
-    │       ├── posts.py          # ✅ Done
-    │       ├── likes.py          # ✅ Done
-    │       ├── comments.py       # ✅ Done
-    │       ├── follows.py        # ✅ Done
-    │       └── users.py          # ✅ Done
-    ├── alembic/                  # Migrations
-    ├── alembic.ini
-    ├── requirements.txt
-    └── .env
+├── backend/
+│   ├── app/
+│   │   ├── main.py               # FastAPI app entry point
+│   │   ├── database.py           # DB connection + session
+│   │   ├── dependencies.py       # get_current_user dependency
+│   │   ├── core/
+│   │   │   ├── config.py         # Settings via .env
+│   │   │   └── security.py       # bcrypt + JWT
+│   │   ├── models/
+│   │   │   ├── user.py
+│   │   │   ├── post.py
+│   │   │   ├── like.py
+│   │   │   ├── comment.py
+│   │   │   └── follow.py
+│   │   ├── schemas/
+│   │   │   ├── user.py
+│   │   │   ├── post.py
+│   │   │   └── comment.py
+│   │   └── routers/
+│   │       ├── auth.py           # ✅ Done
+│   │       ├── posts.py          # ✅ Done
+│   │       ├── likes.py          # ✅ Done
+│   │       ├── comments.py       # ✅ Done
+│   │       ├── follows.py        # ✅ Done
+│   │       └── users.py          # ✅ Done
+│   ├── alembic/                  # Migrations
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── .env
+└── frontend/
+  ├── App.js
+  ├── package.json
+  ├── app.json
+  ├── src/
+  │   ├── navigation/
+  │   │   └── AppNavigator.js   # Navigation stack
+  │   ├── context/
+  │   │   └── AuthContext.js    # Auth state + token handling
+  │   ├── screens/
+  │   │   ├── FeedScreen.js
+  │   │   ├── LoginScreen.js
+  │   │   ├── RegisterScreen.js
+  │   │   ├── ProfileScreen.js
+  │   │   └── UploadScreen.js
+  │   └── services/
+  │       └── api.js            # API client for backend
+  └── assets/
 ```
 
 ---
@@ -194,6 +212,16 @@ uvicorn app.main:app --reload --port 8001
 
 **Swagger UI:** `http://localhost:8001/docs`
 
+### Frontend (development)
+
+```powershell
+cd C:\nnn\orange-app\frontend
+npm install
+npm start
+```
+
+If using Expo CLI directly: `expo start` (ensure `expo-cli` installed globally)
+
 ---
 
 ## Issues Faced & Fixes
@@ -289,14 +317,5 @@ curl -X GET "http://localhost:8001/users/search?q=neeraj" \
 ---
 
 ## Next Steps
-
-- [x] ~~Likes router~~
-- [x] ~~Comments router~~
-- [x] ~~Follow/Unfollow router~~
-- [x] ~~User profile router~~
-- [ ] Expo (React Native) frontend setup
-- [ ] Connect frontend to backend APIs
-- [ ] UI design — Orange theme
-- [ ] Feed only from followed users (Instagram style)
 - [ ] Push notifications
 - [ ] Production deployment
