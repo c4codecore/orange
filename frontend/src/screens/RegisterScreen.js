@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function RegisterScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -15,77 +15,133 @@ export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
 
   const handleRegister = async () => {
-    if (!username || !email || !password) {
-      setError('Sab fields bharo');
-      return;
-    }
+    if (!username || !email || !password) { setError('Sab fields bharo'); return; }
     setLoading(true);
     setError('');
     const result = await register(username, email, password);
     setLoading(false);
-    if (!result.success) {
-      setError(result.error || 'Register failed');
-    }
+    if (!result.success) setError(result.error || 'Register failed');
   };
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Text style={styles.logo}>🍊 Orange</Text>
-      <Text style={styles.tagline}>Join the community</Text>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View style={styles.logoSection}>
+        <View style={styles.logoBox}>
+          <Text style={styles.logoEmoji}>🍊</Text>
+        </View>
+        <Text style={styles.appName}>ORANGE</Text>
+        <Text style={styles.tagline}>join the community</Text>
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        placeholderTextColor="#999"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#999"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#999"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.form}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.btn} onPress={handleRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Register</Text>}
-      </TouchableOpacity>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputLabel}>Username</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="@username"
+            placeholderTextColor="#555"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+        </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Pehle se account hai? <Text style={styles.linkBold}>Login karo</Text></Text>
-      </TouchableOpacity>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputLabel}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="your@email.com"
+            placeholderTextColor="#555"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputLabel}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor="#555"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
+
+        <TouchableOpacity style={styles.btn} onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
+          <LinearGradient
+            colors={['#FF6B00', '#FF9A3C']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.btnGradient}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.btnText}>Account Banao</Text>
+            }
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>ya</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity style={styles.outlineBtn} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.outlineBtnText}>Pehle se account hai? Login karo</Text>
+        </TouchableOpacity>
+      </View>
+
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', padding: 24 },
-  logo: { fontSize: 48, textAlign: 'center', marginBottom: 8 },
-  tagline: { color: '#888', textAlign: 'center', marginBottom: 40, fontSize: 16 },
+  container: {
+    flex: 1, backgroundColor: '#0F0F0F',
+    justifyContent: 'center', padding: 24,
+  },
+  logoSection: { alignItems: 'center', marginBottom: 36 },
+  logoBox: {
+    width: 72, height: 72, borderRadius: 20,
+    backgroundColor: '#FF6B00', justifyContent: 'center',
+    alignItems: 'center', marginBottom: 16,
+  },
+  logoEmoji: { fontSize: 36 },
+  appName: {
+    color: '#FFFFFF', fontSize: 22, fontWeight: '700',
+    letterSpacing: 4, marginBottom: 6,
+  },
+  tagline: { color: '#ABABAB', fontSize: 13 },
+  form: { gap: 12 },
+  inputWrapper: { gap: 6 },
+  inputLabel: { color: '#ABABAB', fontSize: 12, fontWeight: '500', marginLeft: 4 },
   input: {
-    backgroundColor: '#1a1a1a', color: '#fff', borderRadius: 12,
-    padding: 16, marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#2a2a2a'
+    backgroundColor: '#1C1C1E', color: '#FFFFFF',
+    borderRadius: 14, padding: 16, fontSize: 15,
+    borderWidth: 0.5, borderColor: '#2C2C2E',
   },
   btn: {
-    backgroundColor: '#FF6B00', borderRadius: 12,
-    padding: 16, alignItems: 'center', marginBottom: 16
+    borderRadius: 14, marginTop: 4, overflow: 'hidden',
+    shadowColor: '#FF6B00', shadowOpacity: 0.28, shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 }, elevation: 4,
   },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  error: { color: '#ff4444', textAlign: 'center', marginBottom: 16 },
-  link: { color: '#888', textAlign: 'center' },
-  linkBold: { color: '#FF6B00', fontWeight: 'bold' },
+  btnGradient: { padding: 16, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 15, letterSpacing: 0.5 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: '#2C2C2E' },
+  dividerText: { color: '#555', fontSize: 12 },
+  outlineBtn: {
+    borderRadius: 14, padding: 16, alignItems: 'center',
+    borderWidth: 0.5, borderColor: '#2C2C2E',
+  },
+  outlineBtnText: { color: '#ABABAB', fontWeight: '600', fontSize: 15 },
+  error: { color: '#FF4444', textAlign: 'center', fontSize: 13 },
 });
