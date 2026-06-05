@@ -75,8 +75,11 @@ def get_feed(
             "image_url": p.image_url,
             "caption": p.caption,
             "author": p.author.username,
+            "author_id": p.author.id,
+            "author_avatar_url": p.author.avatar_url,
             "likes_count": len(p.likes),
             "comments_count": len(p.comments),
+            "liked": any(l.user_id == current_user.id for l in p.likes),
             "created_at": p.created_at,
         }
         for p in posts

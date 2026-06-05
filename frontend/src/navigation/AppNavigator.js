@@ -88,11 +88,20 @@ function AuthStack() {
   );
 }
 
+function MainStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="UserProfile" component={ProfileScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { token } = useAuth();
   return (
     <NavigationContainer>
-      {token ? <MainTabs /> : <AuthStack />}
+      {token ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

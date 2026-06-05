@@ -40,6 +40,21 @@ export const api = {
   return res.json();
 },
 
+  deletePost: async (token, postId) => {
+    const res = await fetch(`${BASE_URL}/posts/${postId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+
+  getMyPosts: async (token) => {
+    const res = await fetch(`${BASE_URL}/posts/my`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+
   // Likes
   likePost: async (token, postId) => {
     const res = await fetch(`${BASE_URL}/likes/${postId}`, {
@@ -85,8 +100,27 @@ export const api = {
     return res.json();
   },
 
+  updateProfile: async (token, data) => {
+    const res = await fetch(`${BASE_URL}/users/me`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   getUserProfile: async (token, username) => {
     const res = await fetch(`${BASE_URL}/users/${username}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+
+  searchUsers: async (token, q) => {
+    const res = await fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();
