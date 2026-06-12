@@ -6,6 +6,16 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nrjsrm.orange",
@@ -17,7 +27,6 @@
       "usesCleartextTraffic": true,
       "permissions": [],
       "blockedPermissions": [],
-      "networkSecurityConfig": "./network-security-config.xml",
       "adaptiveIcon": {
         "backgroundColor": "#FF6B00",
         "foregroundImage": "./assets/android-icon-foreground.png",
