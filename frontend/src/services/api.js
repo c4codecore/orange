@@ -12,12 +12,27 @@ export const api = {
   },
 
   login: async (data) => {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    try {
+      console.log("Calling:", `${BASE_URL}/auth/login`);
+
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      console.log("Status:", res.status);
+
+      const result = await res.json();
+
+      console.log("Response:", result);
+
+      return result;
+
+    } catch (err) {
+      console.log("LOGIN ERROR:", err);
+      throw err;
+    }
   },
 
   // Posts
@@ -29,16 +44,16 @@ export const api = {
   },
 
   createPost: async (token, formData) => {
-  const res = await fetch(`${BASE_URL}/posts/`, {
-    method: 'POST',
-    headers: { 
-      Authorization: `Bearer ${token}`,
-      'Accept': 'application/json',
-    },
-    body: formData,
-  });
-  return res.json();
-},
+    const res = await fetch(`${BASE_URL}/posts/`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+      body: formData,
+    });
+    return res.json();
+  },
 
   deletePost: async (token, postId) => {
     const res = await fetch(`${BASE_URL}/posts/${postId}`, {
