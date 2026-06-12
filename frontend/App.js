@@ -31,7 +31,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   webApp: {
-    width: 590,
+    width: '100%',
+    maxWidth: 480,
     height: '100vh',
     overflow: 'hidden',
     borderLeftWidth: 0.5,
