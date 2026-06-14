@@ -34,7 +34,7 @@
       "package": "com.nrjsrm.frontend"
     },
     "web": {
-      "favicon": "./assets/orangeLogo.ico"
+      "favicon": "./assets/orangeLogo.png"
     },
     "extra": {
       "eas": {
