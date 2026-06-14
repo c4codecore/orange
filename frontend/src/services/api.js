@@ -1,159 +1,104 @@
 const BASE_URL = 'http://192.168.1.4:8001';
 
-export const api = {
-  // Auth
-  register: async (data) => {
-    const res = await fetch(`${BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
+let _logoutCallback = null;
+export const setLogoutCallback = (fn) => { _logoutCallback = fn; };
 
-  login: async (data) => {
-    try {
-      console.log("Calling:", `${BASE_URL}/auth/login`);
-
-      const res = await fetch(`${BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      console.log("Status:", res.status);
-
-      const result = await res.json();
-
-      console.log("Response:", result);
-
-      return result;
-
-    } catch (err) {
-      console.log("LOGIN ERROR:", err);
-      throw err;
+const apiFetch = async (url, options = {}) => {
+  try {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+      if (_logoutCallback) _logoutCallback();
+      return { error: 'Session expire ho gayi, dobara login karo' };
     }
-  },
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    return { error: 'Network error — server se connect nahi ho pa raha' };
+  }
+};
 
-  // Posts
-  getFeed: async (token) => {
-    const res = await fetch(`${BASE_URL}/posts/feed`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+export const api = {
+  register: (data) => apiFetch(`${BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
 
-  createPost: async (token, formData) => {
-    const res = await fetch(`${BASE_URL}/posts/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Accept': 'application/json',
-      },
-      body: formData,
-    });
-    return res.json();
-  },
+  login: (data) => apiFetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
 
-  deletePost: async (token, postId) => {
-    const res = await fetch(`${BASE_URL}/posts/${postId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  getFeed: (token) => apiFetch(`${BASE_URL}/posts/feed`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  getMyPosts: async (token) => {
-    const res = await fetch(`${BASE_URL}/posts/my`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  createPost: (token, formData) => apiFetch(`${BASE_URL}/posts/`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    body: formData,
+  }),
 
-  // Likes
-  likePost: async (token, postId) => {
-    const res = await fetch(`${BASE_URL}/likes/${postId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  deletePost: (token, postId) => apiFetch(`${BASE_URL}/posts/${postId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  unlikePost: async (token, postId) => {
-    const res = await fetch(`${BASE_URL}/likes/${postId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  getMyPosts: (token) => apiFetch(`${BASE_URL}/posts/my`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  // Comments
-  getComments: async (token, postId) => {
-    const res = await fetch(`${BASE_URL}/comments/${postId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  likePost: (token, postId) => apiFetch(`${BASE_URL}/likes/${postId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  addComment: async (token, postId, content) => {
-    const res = await fetch(`${BASE_URL}/comments/${postId}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content }),
-    });
-    return res.json();
-  },
+  unlikePost: (token, postId) => apiFetch(`${BASE_URL}/likes/${postId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  // Users
-  getMyProfile: async (token) => {
-    const res = await fetch(`${BASE_URL}/users/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  getComments: (token, postId) => apiFetch(`${BASE_URL}/comments/${postId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  updateProfile: async (token, data) => {
-    const res = await fetch(`${BASE_URL}/users/me`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
+  addComment: (token, postId, content) => apiFetch(`${BASE_URL}/comments/${postId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  }),
 
-  getUserProfile: async (token, username) => {
-    const res = await fetch(`${BASE_URL}/users/${username}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  deleteComment: (token, commentId) => apiFetch(`${BASE_URL}/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  searchUsers: async (token, q) => {
-    const res = await fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  getMyProfile: (token) => apiFetch(`${BASE_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 
-  followUser: async (token, userId) => {
-    const res = await fetch(`${BASE_URL}/follows/${userId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  updateProfile: (token, data) => apiFetch(`${BASE_URL}/users/me`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
 
-  unfollowUser: async (token, userId) => {
-    const res = await fetch(`${BASE_URL}/follows/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  },
+  getUserProfile: (token, username) => apiFetch(`${BASE_URL}/users/${username}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+
+  searchUsers: (token, q) => apiFetch(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+
+  followUser: (token, userId) => apiFetch(`${BASE_URL}/follows/${userId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+
+  unfollowUser: (token, userId) => apiFetch(`${BASE_URL}/follows/${userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
 };

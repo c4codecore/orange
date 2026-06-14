@@ -13,3 +13,4 @@ class Like(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     post = relationship("Post", back_populates="likes")
+    user = relationship("User", back_populates="likes")

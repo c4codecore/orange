@@ -1,29 +1,47 @@
 import React from 'react';
-import { View, Platform, StyleSheet } from 'react-native';
-import { AuthProvider } from './src/context/AuthContext';
+import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
-export default function App() {
-  if (Platform.OS === 'web') {
+function Root() {
+  const { loading } = useAuth();
+
+  if (loading) {
     return (
-      <AuthProvider>
-        <View style={styles.webContainer}>
-          <View style={styles.webApp}>
-            <AppNavigator />
-          </View>
-        </View>
-      </AuthProvider>
+      <View style={styles.splash}>
+        <ActivityIndicator color="#FF6B00" size="large" />
+      </View>
     );
   }
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.webContainer}>
+        <View style={styles.webApp}>
+          <AppNavigator />
+        </View>
+      </View>
+    );
+  }
+
+  return <AppNavigator />;
+}
+
+export default function App() {
   return (
     <AuthProvider>
-      <AppNavigator />
+      <Root />
     </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   webContainer: {
     flex: 1,
     backgroundColor: '#000',

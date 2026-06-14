@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.post import Post
 from app.models.user import User
@@ -27,13 +27,23 @@ async def upload_to_supabase(file: UploadFile) -> str:
             content=file_bytes,
         )
 
-    print("STATUS:", response.status_code)  # ye add karo
-    print("RESPONSE:", response.text)   
-
     if response.status_code not in (200, 201):
         raise HTTPException(status_code=500, detail="Image upload failed")
 
     return f"{settings.SUPABASE_URL}/storage/v1/object/public/{settings.SUPABASE_BUCKET}/{file_name}"
+
+
+async def delete_from_supabase(image_url: str):
+    try:
+        file_name = image_url.split(f"/{settings.SUPABASE_BUCKET}/")[-1]
+        url = f"{settings.SUPABASE_URL}/storage/v1/object/{settings.SUPABASE_BUCKET}/{file_name}"
+        async with httpx.AsyncClient() as client:
+            await client.delete(
+                url,
+                headers={"Authorization": f"Bearer {settings.SUPABASE_KEY}"}
+            )
+    except Exception:
+        pass  # Image delete fail hone pe post delete block nahi honi chahiye
 
 
 @router.post("/")
@@ -43,6 +53,9 @@ async def create_post(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if caption and len(caption) > 500:
+        raise HTTPException(status_code=400, detail="Caption 500 characters se zyada nahi ho sakta")
+
     image_url = await upload_to_supabase(image)
 
     post = Post(
@@ -68,7 +81,17 @@ def get_feed(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    posts = db.query(Post).order_by(Post.created_at.desc()).limit(50).all()
+    posts = (
+        db.query(Post)
+        .options(
+            joinedload(Post.author),
+            joinedload(Post.likes),
+            joinedload(Post.comments),
+        )
+        .order_by(Post.created_at.desc())
+        .limit(50)
+        .all()
+    )
     return [
         {
             "id": p.id,
@@ -91,7 +114,13 @@ def get_my_posts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    posts = db.query(Post).filter(Post.user_id == current_user.id).order_by(Post.created_at.desc()).all()
+    posts = (
+        db.query(Post)
+        .options(joinedload(Post.likes), joinedload(Post.comments))
+        .filter(Post.user_id == current_user.id)
+        .order_by(Post.created_at.desc())
+        .all()
+    )
     return [
         {
             "id": p.id,
@@ -106,7 +135,7 @@ def get_my_posts(
 
 
 @router.delete("/{post_id}")
-def delete_post(
+async def delete_post(
     post_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -117,6 +146,10 @@ def delete_post(
     if post.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your post")
 
+    image_url = post.image_url
     db.delete(post)
     db.commit()
+
+    await delete_from_supabase(image_url)
+
     return {"message": "Post deleted"}

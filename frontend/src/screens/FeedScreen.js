@@ -13,7 +13,6 @@ function GradientBrandText() {
     if (Platform.OS === 'web') {
         return <Text style={[styles.headerTitle, styles.headerTitleWeb]}>Orange</Text>;
     }
-
     return (
         <MaskedView maskElement={<Text style={styles.headerTitle}>Orange</Text>}>
             <LinearGradient
@@ -32,9 +31,9 @@ const getHandle = (name = '') => `@${name.replace(/\s+/g, '').toLowerCase() || '
 
 const formatTimeAgo = (value) => {
     if (!value) return 'just now';
-    const created = new Date(value);
+    const dateStr = value.endsWith('Z') ? value : value + 'Z'; // UTC timezone fix
+    const created = new Date(dateStr);
     if (Number.isNaN(created.getTime())) return 'just now';
-
     const seconds = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000));
     if (seconds < 45) return 'just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
@@ -43,12 +42,12 @@ const formatTimeAgo = (value) => {
     return created.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-export default function FeedScreen({ navigation }) {
+export default function FeedScreen({ navigation, route }) {
     const { token, user } = useAuth();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [commentText, setCommentText] = useState('');
+    const [commentText, setCommentText] = useState({}); // fix: object instead of string
     const [activeComment, setActiveComment] = useState(null);
     const [comments, setComments] = useState({});
     const [activeMenu, setActiveMenu] = useState(null);
@@ -71,17 +70,22 @@ export default function FeedScreen({ navigation }) {
 
     useEffect(() => { loadFeed(); }, []);
 
+    // Upload ke baad feed refresh
+    useEffect(() => {
+        if (route?.params?.refresh) {
+            loadFeed();
+        }
+    }, [route?.params?.refresh]);
+
     useEffect(() => {
         if (!searchOpen || searchText.trim().length < 2) {
             setSearchResults([]);
             return;
         }
-
         const timer = setTimeout(async () => {
             const data = await api.searchUsers(token, searchText.trim());
             if (Array.isArray(data)) setSearchResults(data);
         }, 280);
-
         return () => clearTimeout(timer);
     }, [searchOpen, searchText, token]);
 
@@ -101,13 +105,16 @@ export default function FeedScreen({ navigation }) {
     const handleLike = async (postId) => {
         const post = posts.find(p => p.id === postId);
         if (!post) return;
-
         if (post.liked) {
             await api.unlikePost(token, postId);
-            setPosts(posts.map(p => p.id === postId ? { ...p, likes_count: Math.max(0, p.likes_count - 1), liked: false } : p));
+            setPosts(posts.map(p => p.id === postId
+                ? { ...p, likes_count: Math.max(0, p.likes_count - 1), liked: false }
+                : p));
         } else {
             await api.likePost(token, postId);
-            setPosts(posts.map(p => p.id === postId ? { ...p, likes_count: p.likes_count + 1, liked: true } : p));
+            setPosts(posts.map(p => p.id === postId
+                ? { ...p, likes_count: p.likes_count + 1, liked: true }
+                : p));
         }
     };
 
@@ -120,25 +127,26 @@ export default function FeedScreen({ navigation }) {
     };
 
     const handleComment = async (postId) => {
-        if (!commentText.trim()) return;
-        const data = await api.addComment(token, postId, commentText);
+        const text = commentText[postId]?.trim();
+        if (!text) return;
+        const data = await api.addComment(token, postId, text);
         if (data.id) {
             setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data] }));
-            setPosts(posts.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p));
-            setCommentText('');
+            setPosts(posts.map(p => p.id === postId
+                ? { ...p, comments_count: (p.comments_count || 0) + 1 }
+                : p));
+            setCommentText(prev => ({ ...prev, [postId]: '' })); // fix: sirf is post ka clear
         }
     };
 
     const handleShare = async (item) => {
         setActiveMenu(null);
         const message = `${item.author} on Orange${item.caption ? `: ${item.caption}` : ''}\n${item.image_url}`;
-
         if (Platform.OS === 'web' && navigator?.clipboard?.writeText) {
             await navigator.clipboard.writeText(message);
             showNotice('Post link copied');
             return;
         }
-
         try {
             await Share.share({ message });
         } catch {
@@ -153,7 +161,7 @@ export default function FeedScreen({ navigation }) {
             setPosts(posts.filter(p => p.id !== item.id));
             showNotice('Post deleted');
         } else {
-            showNotice(data.detail || 'Delete failed');
+            showNotice(data.error || data.detail || 'Delete failed');
         }
     };
 
@@ -163,7 +171,7 @@ export default function FeedScreen({ navigation }) {
     };
 
     const renderPost = ({ item }) => {
-        const isMine = item.author === user?.username || item.author_id === user?.id;
+        const isMine = item.author_id === user?.id;
 
         return (
             <View style={styles.postShell}>
@@ -288,8 +296,8 @@ export default function FeedScreen({ navigation }) {
                                             style={styles.commentBox}
                                             placeholder="Comment karo..."
                                             placeholderTextColor="#555"
-                                            value={commentText}
-                                            onChangeText={setCommentText}
+                                            value={commentText[item.id] || ''}
+                                            onChangeText={(text) => setCommentText(prev => ({ ...prev, [item.id]: text }))}
                                         />
                                         <TouchableOpacity onPress={() => handleComment(item.id)} activeOpacity={0.75}>
                                             <Text style={styles.sendBtn}>Post</Text>
@@ -379,6 +387,7 @@ export default function FeedScreen({ navigation }) {
                 renderItem={renderPost}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.feedList}
+                onScrollBeginDrag={() => setActiveMenu(null)} // scroll pe menu close
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -401,15 +410,9 @@ export default function FeedScreen({ navigation }) {
 }
 
 const C = {
-    bg: '#0F0F0F',
-    surface: '#1C1C1E',
-    elevated: '#242426',
-    border: '#2C2C2E',
-    orange: '#FF6B00',
-    orangeSoft: '#FF9A3C',
-    white: '#FFFFFF',
-    muted: '#ABABAB',
-    dim: '#555555',
+    bg: '#0F0F0F', surface: '#1C1C1E', elevated: '#242426',
+    border: '#2C2C2E', orange: '#FF6B00', orangeSoft: '#FF9A3C',
+    white: '#FFFFFF', muted: '#ABABAB', dim: '#555555',
 };
 
 const styles = StyleSheet.create({
@@ -441,42 +444,27 @@ const styles = StyleSheet.create({
     },
     headerIconActive: { borderColor: 'rgba(255,154,60,0.45)', backgroundColor: 'rgba(255,107,0,0.14)' },
     headerIconPrimary: {
-        width: 38, height: 38, borderRadius: 19,
-        overflow: 'hidden',
+        width: 38, height: 38, borderRadius: 19, overflow: 'hidden',
         shadowColor: C.orange, shadowOpacity: 0.26, shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 }, elevation: 4,
     },
     headerIconGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     searchPanel: {
-        padding: 12,
-        borderBottomWidth: 0.5,
+        padding: 12, borderBottomWidth: 0.5,
         borderBottomColor: 'rgba(255,255,255,0.08)',
         backgroundColor: 'rgba(15,15,15,0.96)',
     },
     searchBox: {
-        maxWidth: 536,
-        width: '100%',
-        alignSelf: 'center',
-        height: 42,
-        borderRadius: 21,
-        paddingHorizontal: 13,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: C.surface,
-        borderWidth: 0.5,
-        borderColor: C.border,
+        maxWidth: 536, width: '100%', alignSelf: 'center',
+        height: 42, borderRadius: 21, paddingHorizontal: 13,
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        backgroundColor: C.surface, borderWidth: 0.5, borderColor: C.border,
     },
     searchInput: { flex: 1, color: C.white, fontSize: 14 },
     searchResult: {
-        maxWidth: 536,
-        width: '100%',
-        alignSelf: 'center',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingVertical: 10,
-        paddingHorizontal: 4,
+        maxWidth: 536, width: '100%', alignSelf: 'center',
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        paddingVertical: 10, paddingHorizontal: 4,
     },
     searchAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
     searchAvatarText: { color: C.white, fontWeight: '800', fontSize: 13 },
@@ -484,60 +472,33 @@ const styles = StyleSheet.create({
     searchHandle: { color: C.dim, fontSize: 12, marginTop: 1 },
     searchEmpty: { color: C.dim, fontSize: 13, textAlign: 'center', paddingTop: 12 },
     notice: {
-        alignSelf: 'center',
-        marginTop: 10,
-        paddingHorizontal: 13,
-        paddingVertical: 8,
-        color: C.white,
-        backgroundColor: 'rgba(255,107,0,0.22)',
-        borderRadius: 16,
-        overflow: 'hidden',
-        fontSize: 12,
-        fontWeight: '700',
+        alignSelf: 'center', marginTop: 10, paddingHorizontal: 13, paddingVertical: 8,
+        color: C.white, backgroundColor: 'rgba(255,107,0,0.22)',
+        borderRadius: 16, overflow: 'hidden', fontSize: 12, fontWeight: '700',
     },
-    feedList: {
-        paddingTop: 14,
-        paddingBottom: 92,
-        width: '100%',
-        maxWidth: 560,
-        alignSelf: 'center',
-    },
-    postShell: {
-        paddingHorizontal: 12,
-        marginBottom: 16,
-    },
+    feedList: { paddingTop: 14, paddingBottom: 92, width: '100%', maxWidth: 560, alignSelf: 'center' },
+    postShell: { paddingHorizontal: 12, marginBottom: 16 },
     postBorder: {
-        borderRadius: 24,
-        padding: 1,
-        shadowColor: '#000',
-        shadowOpacity: 0.32,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 12 },
-        elevation: 5,
+        borderRadius: 24, padding: 1,
+        shadowColor: '#000', shadowOpacity: 0.32, shadowRadius: 18,
+        shadowOffset: { width: 0, height: 12 }, elevation: 5,
     },
     post: {
-        borderRadius: 23,
-        overflow: 'hidden',
-        backgroundColor: C.surface,
-        borderWidth: 0.5,
+        borderRadius: 23, overflow: 'hidden',
+        backgroundColor: C.surface, borderWidth: 0.5,
         borderColor: 'rgba(255,255,255,0.07)',
     },
     postHeader: {
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: 14, paddingVertical: 12, gap: 10,
         backgroundColor: 'rgba(255,255,255,0.025)',
-        position: 'relative',
-        zIndex: 2,
+        position: 'relative', zIndex: 2,
     },
-    avatarRing: {
-        width: 44, height: 44, borderRadius: 22,
-        padding: 2,
-    },
+    avatarRing: { width: 44, height: 44, borderRadius: 22, padding: 2 },
     avatar: {
         width: 40, height: 40, borderRadius: 20,
         backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center',
-        borderWidth: 1, borderColor: C.bg,
-        overflow: 'hidden',
+        borderWidth: 1, borderColor: C.bg, overflow: 'hidden',
     },
     avatarImage: { width: '100%', height: '100%' },
     avatarText: { color: C.white, fontWeight: '800', fontSize: 15 },
@@ -546,89 +507,49 @@ const styles = StyleSheet.create({
     handle: { color: C.dim, fontSize: 12, marginTop: 2 },
     postMeta: { alignItems: 'flex-end', gap: 6 },
     timeAgo: { color: C.dim, fontSize: 11 },
-    moreBtn: {
-        width: 28, height: 24, borderRadius: 12,
-        justifyContent: 'center', alignItems: 'center',
-    },
+    moreBtn: { width: 28, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     moreBtnActive: { backgroundColor: 'rgba(255,255,255,0.08)' },
     menu: {
-        position: 'absolute',
-        right: 12,
-        top: 54,
-        width: 166,
-        borderRadius: 14,
-        paddingVertical: 6,
-        backgroundColor: '#232326',
-        borderWidth: 0.5,
-        borderColor: 'rgba(255,255,255,0.12)',
-        shadowColor: '#000',
-        shadowOpacity: 0.34,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 8,
-        zIndex: 10,
+        position: 'absolute', right: 12, top: 54, width: 166,
+        borderRadius: 14, paddingVertical: 6, backgroundColor: '#232326',
+        borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.12)',
+        shadowColor: '#000', shadowOpacity: 0.34, shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 }, elevation: 8, zIndex: 10,
     },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 9,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
+    menuItem: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 10 },
     menuText: { color: C.white, fontSize: 13, fontWeight: '600' },
     menuTextDanger: { color: '#FF6B6B', fontSize: 13, fontWeight: '700' },
     imageFrame: {
-        marginHorizontal: 10,
-        borderRadius: 18,
-        aspectRatio: 1,
-        overflow: 'hidden',
-        backgroundColor: '#080808',
-        borderWidth: 0.5,
-        borderColor: 'rgba(255,255,255,0.08)',
+        marginHorizontal: 10, borderRadius: 18, aspectRatio: 1,
+        overflow: 'hidden', backgroundColor: '#080808',
+        borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.08)',
     },
     image: { width: '100%', height: '100%' },
     imageFade: {
-        position: 'absolute',
-        left: 0, right: 0, bottom: 0,
-        height: '38%',
-        pointerEvents: 'none',
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        height: '38%', pointerEvents: 'none',
     },
     postBody: { paddingHorizontal: 12, paddingTop: 11, paddingBottom: 13 },
-    actions: {
-        flexDirection: 'row', justifyContent: 'space-between',
-        alignItems: 'center', marginBottom: 10,
-    },
+    actions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     actionsLeft: { flexDirection: 'row', gap: 8 },
     actionPill: {
-        minWidth: 58, height: 36, borderRadius: 18,
-        paddingHorizontal: 11, flexDirection: 'row',
-        alignItems: 'center', justifyContent: 'center', gap: 6,
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)',
+        minWidth: 58, height: 36, borderRadius: 18, paddingHorizontal: 11,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)',
     },
     iconBtn: {
-        width: 36, height: 36, borderRadius: 18,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)',
+        width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)',
     },
     actionCount: { color: C.white, fontSize: 13, fontWeight: '700' },
     caption: { color: C.muted, fontSize: 13.5, lineHeight: 19, marginBottom: 7 },
     captionUsername: { color: C.white, fontWeight: '700' },
     viewComments: { color: C.dim, paddingBottom: 4, fontSize: 13 },
-    commentsSection: {
-        marginTop: 6,
-        paddingTop: 10,
-        borderTopWidth: 0.5,
-        borderTopColor: 'rgba(255,255,255,0.08)',
-    },
+    commentsSection: { marginTop: 6, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.08)' },
     commentRow: { flexDirection: 'row', marginBottom: 5 },
     commentAuthor: { color: C.white, fontWeight: '700', fontSize: 13 },
     commentContent: { color: C.muted, fontSize: 13, flex: 1 },
-    commentInputRow: {
-        flexDirection: 'row', alignItems: 'center',
-        gap: 10, marginTop: 9,
-    },
+    commentInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 9 },
     commentAvatar: {
         width: 28, height: 28, borderRadius: 14,
         backgroundColor: C.orange, justifyContent: 'center', alignItems: 'center',
@@ -645,8 +566,7 @@ const styles = StyleSheet.create({
         width: 72, height: 72, borderRadius: 22,
         backgroundColor: 'rgba(255,255,255,0.06)',
         borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center', alignItems: 'center',
-        marginBottom: 8,
+        justifyContent: 'center', alignItems: 'center', marginBottom: 8,
     },
     emptyText: { color: C.white, fontSize: 16, fontWeight: '700' },
     emptySubtext: { color: C.dim, fontSize: 13, textAlign: 'center' },

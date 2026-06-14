@@ -9,7 +9,6 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserOut)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    # Check duplicate
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     if db.query(User).filter(User.username == user_data.username).first():
@@ -27,9 +26,12 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
-    print("LOGIN DATA:", user_data)
     user = db.query(User).filter(User.email == user_data.email).first()
-    if not user or not verify_password(user_data.password, user.password_hash):
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.password_hash:
+        raise HTTPException(status_code=401, detail="Please login with Google")
+    if not verify_password(user_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": str(user.id)})

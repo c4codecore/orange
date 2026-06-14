@@ -41,6 +41,8 @@ export default function UploadScreen({ navigation }) {
 
   const handleUpload = async () => {
     if (!image) { setError('Pehle image select karo'); return; }
+    if (caption.length > 500) { setError('Caption 500 characters se zyada nahi ho sakta'); return; }
+
     setLoading(true);
     setError('');
 
@@ -59,9 +61,9 @@ export default function UploadScreen({ navigation }) {
     if (data.id) {
       setImage(null);
       setCaption('');
-      navigation.navigate('Feed');
+      navigation.navigate('Feed', { refresh: Date.now() }); // ← feed reload trigger
     } else {
-      setError(data.detail || 'Upload failed');
+      setError(data.error || data.detail || 'Upload failed');
     }
   };
 
@@ -124,8 +126,11 @@ export default function UploadScreen({ navigation }) {
           multiline
           numberOfLines={4}
           textAlignVertical="top"
+          maxLength={500}
         />
-        <Text style={styles.charCount}>{caption.length}/500</Text>
+        <Text style={[styles.charCount, caption.length > 450 && styles.charCountWarn]}>
+          {caption.length}/500
+        </Text>
       </View>
 
       {error ? (
@@ -212,6 +217,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: C.border, minHeight: 100,
   },
   charCount: { color: C.dim, fontSize: 11, textAlign: 'right', marginTop: 4, marginRight: 4 },
+  charCountWarn: { color: '#FF9A3C' },
   errorBox: {
     marginHorizontal: 16, marginTop: 12,
     backgroundColor: '#2a1010', borderRadius: 12,
