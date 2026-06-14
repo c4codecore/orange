@@ -4,7 +4,7 @@
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/orangeLogo.png",
     "userInterfaceStyle": "dark",
     "plugins": [
       [
@@ -28,15 +28,13 @@
       "permissions": [],
       "blockedPermissions": [],
       "adaptiveIcon": {
-        "backgroundColor": "#FF6B00",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/orangeLogo.png",
+        "backgroundColor": "#0F0F0F"
       },
       "package": "com.nrjsrm.frontend"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/orangeLogo.ico"
     },
     "extra": {
       "eas": {
