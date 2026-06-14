@@ -8,6 +8,7 @@ import { api } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { wsService } from '../services/websocket';
 
 function GradientBrandText() {
     if (Platform.OS === 'web') {
@@ -78,16 +79,70 @@ export default function FeedScreen({ navigation, route }) {
     }, [route?.params?.refresh]);
 
     useEffect(() => {
-        if (!searchOpen || searchText.trim().length < 2) {
-            setSearchResults([]);
-            return;
-        }
-        const timer = setTimeout(async () => {
-            const data = await api.searchUsers(token, searchText.trim());
-            if (Array.isArray(data)) setSearchResults(data);
-        }, 280);
-        return () => clearTimeout(timer);
-    }, [searchOpen, searchText, token]);
+        const unsubscribers = [
+            wsService.on('post_added', async () => {
+                const data = await api.getFeed(token);
+                if (Array.isArray(data)) setPosts(data);
+            }),
+
+            wsService.on('post_deleted', ({ post_id }) => {
+                setPosts(prev => prev.filter(p => p.id !== post_id));
+            }),
+
+            wsService.on('like_added', ({ post_id, user_id }) => {
+                setPosts(prev => prev.map(p => {
+                    if (p.id !== post_id) return p;
+                    return {
+                        ...p,
+                        likes_count: p.likes_count + 1,
+                        liked: user_id === user?.id ? true : p.liked,
+                    };
+                }));
+            }),
+
+            wsService.on('like_removed', ({ post_id, user_id }) => {
+                setPosts(prev => prev.map(p => {
+                    if (p.id !== post_id) return p;
+                    return {
+                        ...p,
+                        likes_count: Math.max(0, p.likes_count - 1),
+                        liked: user_id === user?.id ? false : p.liked,
+                    };
+                }));
+            }),
+
+            wsService.on('comment_added', ({ post_id, author, content, comment_id }) => {
+                setPosts(prev => prev.map(p =>
+                    p.id === post_id
+                        ? { ...p, comments_count: p.comments_count + 1 }
+                        : p
+                ));
+                // Agar yeh post ka comment section open hai toh wahan bhi add karo
+                setComments(prev => {
+                    if (!prev[post_id]) return prev;
+                    return {
+                        ...prev,
+                        [post_id]: [...prev[post_id], {
+                            id: comment_id,
+                            author,
+                            content,
+                            created_at: new Date().toISOString(),
+                        }]
+                    };
+                });
+            }),
+
+            wsService.on('comment_removed', ({ post_id }) => {
+                setPosts(prev => prev.map(p =>
+                    p.id === post_id
+                        ? { ...p, comments_count: Math.max(0, p.comments_count - 1) }
+                        : p
+                ));
+            }),
+        ];
+
+        return () => unsubscribers.forEach(unsub => unsub());
+    }, [token, user?.id]);
 
     const goToUser = (username) => {
         setActiveMenu(null);

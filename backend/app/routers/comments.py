@@ -5,6 +5,7 @@ from app.models.comment import Comment
 from app.models.post import Post
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.core.websocket_manager import manager
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -13,7 +14,7 @@ class CommentCreate(BaseModel):
     content: str
 
 @router.post("/{post_id}")
-def add_comment(post_id: int, data: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def add_comment(post_id: int, data: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -22,6 +23,16 @@ def add_comment(post_id: int, data: CommentCreate, db: Session = Depends(get_db)
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    await manager.broadcast({
+        "type": "comment_added",
+        "post_id": post_id,
+        "comment_id": comment.id,
+        "user_id": current_user.id,
+        "author": current_user.username,
+        "content": data.content,
+    })
+
     return {
         "id": comment.id,
         "content": comment.content,
@@ -43,13 +54,21 @@ def get_comments(post_id: int, db: Session = Depends(get_db), current_user: User
     ]
 
 @router.delete("/{comment_id}")
-def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your comment")
 
+    post_id = comment.post_id
     db.delete(comment)
     db.commit()
+
+    await manager.broadcast({
+        "type": "comment_removed",
+        "post_id": post_id,
+        "comment_id": comment_id,
+    })
+
     return {"message": "Comment deleted"}

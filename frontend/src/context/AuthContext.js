@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, setLogoutCallback } from '../services/api';
+import { wsService } from '../services/websocket';
 
 const AuthContext = createContext();
 
@@ -9,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // App start pe saved token load karo
   useEffect(() => {
     const loadToken = async () => {
       try {
@@ -17,8 +17,12 @@ export const AuthProvider = ({ children }) => {
         if (savedToken) {
           setToken(savedToken);
           const profile = await api.getMyProfile(savedToken);
-          if (profile.id) setUser(profile);
-          else await logout(); // token invalid hai
+          if (profile.id) {
+            setUser(profile);
+            wsService.connect(savedToken); // ← WebSocket connect
+          } else {
+            await logout();
+          }
         }
       } catch (e) {
         // ignore
@@ -29,7 +33,6 @@ export const AuthProvider = ({ children }) => {
     loadToken();
   }, []);
 
-  // 401 aane pe auto logout
   useEffect(() => {
     setLogoutCallback(logout);
   }, []);
@@ -41,6 +44,7 @@ export const AuthProvider = ({ children }) => {
       setToken(data.access_token);
       const profile = await api.getMyProfile(data.access_token);
       setUser(profile);
+      wsService.connect(data.access_token); // ← WebSocket connect
       return { success: true };
     }
     return { success: false, error: data.error || data.detail || 'Login failed' };
@@ -56,6 +60,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    wsService.disconnect(); // ← WebSocket disconnect
     await AsyncStorage.removeItem('token');
     setToken(null);
     setUser(null);

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { wsService } from '../services/websocket';
 
 const getInitial = (name = '') => name?.[0]?.toUpperCase() || 'O';
 
@@ -48,9 +49,46 @@ export default function ProfileScreen({ route, navigation }) {
     };
 
     useEffect(() => {
-        setLoading(true);
-        loadProfile();
-    }, [usernameParam]);
+        if (!profile?.id) return;
+
+        const unsubscribers = [
+            wsService.on('follow_added', ({ follower_id, following_id }) => {
+                setProfile(prev => {
+                    if (!prev) return prev;
+                    let updated = { ...prev };
+                    if (following_id === prev.id) {
+                        updated.followers_count = (prev.followers_count || 0) + 1;
+                    }
+                    if (follower_id === prev.id && isOwnProfile) {
+                        updated.following_count = (prev.following_count || 0) + 1;
+                    }
+                    if (following_id === prev.id && follower_id === user?.id) {
+                        updated.is_following = true;
+                    }
+                    return updated;
+                });
+            }),
+
+            wsService.on('follow_removed', ({ follower_id, following_id }) => {
+                setProfile(prev => {
+                    if (!prev) return prev;
+                    let updated = { ...prev };
+                    if (following_id === prev.id) {
+                        updated.followers_count = Math.max(0, (prev.followers_count || 0) - 1);
+                    }
+                    if (follower_id === prev.id && isOwnProfile) {
+                        updated.following_count = Math.max(0, (prev.following_count || 0) - 1);
+                    }
+                    if (following_id === prev.id && follower_id === user?.id) {
+                        updated.is_following = false;
+                    }
+                    return updated;
+                });
+            }),
+        ];
+
+        return () => unsubscribers.forEach(unsub => unsub());
+    }, [profile?.id, user?.id]);
 
     const handleFollow = async () => {
         if (!profile?.id) return;

@@ -5,6 +5,7 @@ from app.models.post import Post
 from app.models.user import User
 from app.dependencies import get_current_user
 from app.core.config import settings
+from app.core.websocket_manager import manager      
 import httpx
 import uuid
 
@@ -66,6 +67,12 @@ async def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
+    
+    await manager.broadcast({
+    "type": "post_added",
+    "post_id": post.id,
+    "user_id": post.user_id,
+    })
 
     return {
         "id": post.id,
@@ -151,5 +158,9 @@ async def delete_post(
     db.commit()
 
     await delete_from_supabase(image_url)
+    await manager.broadcast({
+    "type": "post_deleted",
+    "post_id": post_id,
+    })
 
     return {"message": "Post deleted"}
