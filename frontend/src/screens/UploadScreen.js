@@ -46,30 +46,46 @@ export default function UploadScreen({ navigation }) {
     setLoading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('caption', caption);
+    try {
+      const formData = new FormData();
+      
+      if (caption) {
+        formData.append('caption', caption);
+      }
 
-    if (Platform.OS === 'web') {
-      formData.append('image', image.file);
-    } else {
-      const uri = image.uri;
-      const fileName = uri.split('/').pop();
-      const ext = fileName.split('.').pop().toLowerCase();
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-      formData.append('image', { uri, type: mimeType, name: fileName || `photo.${ext}` });
+      if (Platform.OS === 'web') {
+        formData.append('image', image.file);
+      } else {
+        // React Native ke liye exact format
+        const uri = image.uri;
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        
+        formData.append('image', {
+          uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+          name: filename || 'photo.jpg',
+          type,
+        });
+      }
+
+      console.log('[UPLOAD] FormData ready, sending...');
+      const data = await api.createPost(token, formData);
+      setLoading(false);
+
+      if (data.id) {
+        setImage(null);
+        setCaption('');
+        navigation.navigate('Feed', { refresh: Date.now() });
+      } else {
+        setError(data.error || data.detail || 'Upload failed');
+      }
+    } catch (e) {
+      console.log('[UPLOAD] Exception:', e.message);
+      setLoading(false);
+      setError('Upload failed');
     }
-
-    const data = await api.createPost(token, formData);
-    setLoading(false);
-
-    if (data.id) {
-      setImage(null);
-      setCaption('');
-      navigation.navigate('Feed', { refresh: Date.now() }); // ← feed reload trigger
-    } else {
-      setError(data.error || data.detail || 'Upload failed');
-    }
-  };
+};
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
