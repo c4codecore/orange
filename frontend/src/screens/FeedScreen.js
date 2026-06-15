@@ -69,7 +69,9 @@ export default function FeedScreen({ navigation, route }) {
         setRefreshing(false);
     };
 
-    useEffect(() => { loadFeed(); }, []);
+    useEffect(() => {
+        if (token) loadFeed();
+    }, [token]);
 
     // Upload ke baad feed refresh
     useEffect(() => {
@@ -186,6 +188,21 @@ export default function FeedScreen({ navigation, route }) {
         if (!text) return;
         const data = await api.addComment(token, postId, text);
         if (data.id) {
+            // Local state bhi update karo — WS pe depend mat karo
+            setComments(prev => ({
+                ...prev,
+                [postId]: [...(prev[postId] || []), {
+                    id: data.id,
+                    author: data.author,
+                    content: data.content,
+                    created_at: data.created_at,
+                }]
+            }));
+            setPosts(prev => prev.map(p =>
+                p.id === postId
+                    ? { ...p, comments_count: (p.comments_count || 0) + 1 }
+                    : p
+            ));
             setCommentText(prev => ({ ...prev, [postId]: '' }));
         }
     };

@@ -23,7 +23,10 @@ export default function ProfileScreen({ route, navigation }) {
     const [bioText, setBioText] = useState('');
     const [notice, setNotice] = useState('');
 
-    useEffect(() => { loadProfile(); }, [usernameParam]);
+    useEffect(() => {
+        setLoading(true);  // ← yeh missing tha
+        loadProfile();
+    }, [usernameParam]);
 
     const showNotice = (message) => {
         setNotice(message);
@@ -31,23 +34,27 @@ export default function ProfileScreen({ route, navigation }) {
     };
 
     const loadProfile = async () => {
-        if (isOwnProfile) {
-            const data = await api.getMyProfile(token);
-            const posts = await api.getMyPosts(token);
-            if (data.id) {
-                const nextProfile = { ...data, posts: Array.isArray(posts) ? posts : [] };
-                setProfile(nextProfile);
-                setBioText(nextProfile.bio || '');
+        try {
+            if (isOwnProfile) {
+                const data = await api.getMyProfile(token);
+                const posts = await api.getMyPosts(token);
+                if (data.id) {
+                    setProfile({ ...data, posts: Array.isArray(posts) ? posts : [] });
+                    setBioText(data.bio || '');
+                }
+            } else {
+                const data = await api.getUserProfile(token, usernameParam);
+                if (data.id) {
+                    setProfile(data);
+                    setBioText(data.bio || '');
+                }
             }
-        } else {
-            const data = await api.getUserProfile(token, usernameParam);
-            if (data.id) {
-                setProfile(data);
-                setBioText(data.bio || '');
-            }
+        } catch (e) {
+            console.log('[PROFILE] Load error:', e.message);
+        } finally {
+            setLoading(false);   // ← finally mein rakho
+            setRefreshing(false);
         }
-        setLoading(false);
-        setRefreshing(false);
     };
 
     useEffect(() => {
@@ -90,7 +97,7 @@ export default function ProfileScreen({ route, navigation }) {
         ];
 
         return () => unsubscribers.forEach(unsub => unsub());
-    }, [profile?.id, user?.id]);
+    }, [profile?.id, user?.id, isOwnProfile]);
 
     const handleFollow = async () => {
         if (!profile?.id) return;
@@ -116,7 +123,7 @@ export default function ProfileScreen({ route, navigation }) {
             setEditing(false);
             showNotice('Profile updated');
         } else {
-            showNotice(data.detail || 'Update failed');
+            showNotice(data.error || data.detail || 'Update failed');
         }
     };
 
@@ -250,7 +257,11 @@ export default function ProfileScreen({ route, navigation }) {
                     </View>
                 }
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.gridItem} activeOpacity={0.84}>
+                    <TouchableOpacity
+                        style={styles.gridItem}
+                        activeOpacity={0.84}
+                        onPress={() => showNotice('Post detail coming soon!')}
+                    >
                         <Image source={{ uri: item.image_url }} style={styles.gridImage} resizeMode="cover" />
                     </TouchableOpacity>
                 )}
