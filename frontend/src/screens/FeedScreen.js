@@ -186,11 +186,7 @@ export default function FeedScreen({ navigation, route }) {
         if (!text) return;
         const data = await api.addComment(token, postId, text);
         if (data.id) {
-            // setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data] }));
-            // setPosts(posts.map(p => p.id === postId
-            //     ? { ...p, comments_count: (p.comments_count || 0) + 1 }
-            //     : p));
-            setCommentText(prev => ({ ...prev, [postId]: '' })); // fix: sirf is post ka clear
+            setCommentText(prev => ({ ...prev, [postId]: '' }));
         }
     };
 

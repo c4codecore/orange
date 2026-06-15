@@ -52,7 +52,11 @@ export default function UploadScreen({ navigation }) {
     if (Platform.OS === 'web') {
       formData.append('image', image.file);
     } else {
-      formData.append('image', { uri: image.uri, type: 'image/jpeg', name: 'photo.jpg' });
+      const uri = image.uri;
+      const fileName = uri.split('/').pop();
+      const ext = fileName.split('.').pop().toLowerCase();
+      const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+      formData.append('image', { uri, type: mimeType, name: fileName || `photo.${ext}` });
     }
 
     const data = await api.createPost(token, formData);

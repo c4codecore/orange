@@ -23,6 +23,8 @@ export default function ProfileScreen({ route, navigation }) {
     const [bioText, setBioText] = useState('');
     const [notice, setNotice] = useState('');
 
+    useEffect(() => { loadProfile(); }, [usernameParam]);
+
     const showNotice = (message) => {
         setNotice(message);
         setTimeout(() => setNotice(''), 2200);

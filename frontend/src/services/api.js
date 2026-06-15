@@ -5,14 +5,18 @@ export const setLogoutCallback = (fn) => { _logoutCallback = fn; };
 
 const apiFetch = async (url, options = {}) => {
   try {
+    console.log('API Call:', url);
     const res = await fetch(url, options);
+    console.log('API Response:', res.status, url);
     if (res.status === 401) {
       if (_logoutCallback) _logoutCallback();
       return { error: 'Session expire ho gayi, dobara login karo' };
     }
     const data = await res.json();
+    console.log('API Data:', JSON.stringify(data).slice(0, 200));
     return data;
   } catch (e) {
+    console.log('API Error:', url, e.message);
     return { error: 'Network error — server se connect nahi ho pa raha' };
   }
 };
