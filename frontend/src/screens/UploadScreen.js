@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export default function UploadScreen({ navigation }) {
   const { token } = useAuth();
