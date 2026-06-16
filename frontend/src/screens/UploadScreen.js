@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import * as FileSystem from 'expo-file-system';
 
 export default function UploadScreen({ navigation }) {
   const { token } = useAuth();
@@ -48,7 +49,7 @@ export default function UploadScreen({ navigation }) {
 
     try {
       const formData = new FormData();
-      
+
       if (caption) {
         formData.append('caption', caption);
       }
@@ -56,16 +57,23 @@ export default function UploadScreen({ navigation }) {
       if (Platform.OS === 'web') {
         formData.append('image', image.file);
       } else {
-        // React Native ke liye exact format
+        // URI ko local cache mein copy karo pehle
         const uri = image.uri;
-        const filename = uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
+        const filename = uri.split('/').pop() || 'photo.jpg';
+        const ext = filename.split('.').pop()?.toLowerCase() || 'jpeg';
+        const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+        // Cache directory mein copy karo
+        const cacheUri = `${FileSystem.cacheDirectory}upload_${Date.now()}.${ext}`;
+        await FileSystem.copyAsync({ from: uri, to: cacheUri });
+
+        console.log('[UPLOAD] Cached URI:', cacheUri);
+        console.log('[UPLOAD] Filename:', filename, '| Type:', mimeType);
+
         formData.append('image', {
-          uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
-          name: filename || 'photo.jpg',
-          type,
+          uri: cacheUri,
+          name: filename,
+          type: mimeType,
         });
       }
 
@@ -81,11 +89,11 @@ export default function UploadScreen({ navigation }) {
         setError(data.error || data.detail || 'Upload failed');
       }
     } catch (e) {
-      console.log('[UPLOAD] Exception:', e.message);
+      console.log('[UPLOAD] Exception:', e.message, e);
       setLoading(false);
-      setError('Upload failed');
+      setError('Upload failed — ' + e.message);
     }
-};
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
