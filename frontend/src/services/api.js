@@ -51,30 +51,37 @@ export const api = {
     });
   },
 
-  createPost: async (token, formData) => {
-    console.log('[POST] Creating post...');
-    try {
-      const res = await fetch(`${BASE_URL}/posts/`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-        body: formData,
-      });
-      console.log('[POST] Upload response status:', res.status);
-      if (res.status === 401) {
-        console.log('[POST] 401 — logout trigger');
-        if (_logoutCallback) _logoutCallback();
-        return { error: 'Session expire ho gayi, dobara login karo' };
-      }
-      const data = await res.json();
-      console.log('[POST] Upload result:', JSON.stringify(data).slice(0, 300));
-      return data;
-    } catch (e) {
-      console.log('[POST] Upload ERROR:', e.message);
-      return { error: 'Network error — server se connect nahi ho pa raha' };
-    }
+  createPost: (token, formData) => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BASE_URL}/posts/`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('Accept', 'application/json');
+
+      xhr.onload = () => {
+        console.log('[POST] XHR status:', xhr.status);
+        try {
+          const data = JSON.parse(xhr.responseText);
+          console.log('[POST] XHR response:', JSON.stringify(data).slice(0, 300));
+          if (xhr.status === 401) {
+            if (_logoutCallback) _logoutCallback();
+            resolve({ error: 'Session expire ho gayi, dobara login karo' });
+          } else {
+            resolve(data);
+          }
+        } catch (e) {
+          console.log('[POST] XHR parse error:', e.message);
+          resolve({ error: 'Response parse failed' });
+        }
+      };
+
+      xhr.onerror = () => {
+        console.log('[POST] XHR error:', xhr.status);
+        resolve({ error: 'Network error — server se connect nahi ho pa raha' });
+      };
+
+      xhr.send(formData);
+    });
   },
 
   deletePost: (token, postId) => {
