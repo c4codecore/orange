@@ -44,7 +44,7 @@ async def delete_from_supabase(image_url: str):
                 headers={"Authorization": f"Bearer {settings.SUPABASE_KEY}"}
             )
     except Exception:
-        pass  # Image delete fail hone pe post delete block nahi honi chahiye
+        pass
 
 
 @router.post("/")

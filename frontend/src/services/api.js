@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.1.4:8001';
+const BASE_URL = 'http://192.168.1.100:8001';
 
 let _logoutCallback = null;
 export const setLogoutCallback = (fn) => { _logoutCallback = fn; };

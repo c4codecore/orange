@@ -1,4 +1,4 @@
-const WS_URL = 'ws://192.168.1.4:8001/ws';
+const WS_URL = 'ws://192.168.1.100:8001/ws';
 
 class WebSocketService {
     constructor() {
